@@ -2,10 +2,24 @@ import mujoco as mj
 from mujoco.glfw import glfw
 import numpy as np
 import os
+import csv
+
+#@title Import packagess for plotting and creating graphics
+import time
+import itertools
+import numpy as np
+from typing import Callable, NamedTuple, Optional, Union, List
+import matplotlib.pyplot as plt
 
 xml_path = 'motor_model.xml'
-simend = 10
+simend = 7
 print_camera_config = 0
+
+header = ['timestep', 'angular_velocity', 'torque']
+file_name = "test_data.csv"
+f = open('data/' + file_name, mode='w', newline='')
+writer = csv.writer(f)
+writer.writerow(header)
 
 # For callback functions
 button_left = False
@@ -27,8 +41,8 @@ def controller(model, data):
     # data.ctrl[1] = np.pi  #position
 
     #speed control; velocity servo
-    set_velocity_servo(2,100)
-    data.ctrl[2] = 0.5  #velocity
+    set_velocity_servo(2, 0.7)
+    data.ctrl[2] = 9.4883  #velocity
 
     #position control; position/velocity servo
     # set_position_servo(1, 100)
@@ -158,16 +172,23 @@ glfw.set_scroll_callback(window, scroll)
 # cam.elevation = -45
 # cam.distance = 2
 # cam.lookat = np.array([0.0, 0.0, 0])
-cam.azimuth = 179.4731173933045 ; cam.elevation = -1.3694378164892507 ; cam.distance =  4.670110645761061
+cam.azimuth = -0.2568020402892691 ; cam.elevation = -1.2800579336767537 ; cam.distance =  0.936735440362224
 cam.lookat =np.array([ 0.0 , 0.0 , 0.0 ])
 
 data.qpos[0] = np.pi/2
 
 #initialize the controller
-init_controller(model,data)
+init_controller(model, data)
 
 #set the controller
 mj.set_mjcb_control(controller)
+
+mj.mj_resetDataKeyframe(model, data, 0)
+print(model.body_mass)
+
+time_steps = []
+angular_velocity = []
+torque = []
 
 while not glfw.window_should_close(window):
     time_prev = data.time
@@ -177,11 +198,15 @@ while not glfw.window_should_close(window):
 
     if (data.time>=simend):
         break;
-    
     # DATA READOUTS: 
-    # print(data.actuator_velocity[2])
-    print(data.sensor('torque_sensor').data[0])
-
+    cur_torque = data.sensor('torque_sensor').data[0]
+    cur_vel = data.actuator_velocity[2]
+    time = data.time
+    time_steps.append(data.time)
+    angular_velocity.append(cur_vel)
+    torque.append(cur_torque)
+    row = [str(time), str(cur_vel), str(cur_torque)]
+    writer.writerow(row)
     # get framebuffer viewport
     viewport_width, viewport_height = glfw.get_framebuffer_size(
         window)
@@ -203,4 +228,21 @@ while not glfw.window_should_close(window):
     # process pending GUI events, call GLFW callbacks
     glfw.poll_events()
 
+dpi = 120
+width = 600
+height = 800
+figsize = (width / dpi, height / dpi)
+_, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi, sharex=True)
+
+ax[0].plot(time_steps, angular_velocity)
+ax[0].set_title('angular velocity')
+ax[0].set_ylabel('radians / second')
+
+ax[1].plot(time_steps, torque)
+ax[1].set_xlabel('time (seconds)')
+ax[1].set_ylabel('Torque')
+_ = ax[1].set_title('N*m')
+plt.show()
+
+f.close()
 glfw.terminate()
