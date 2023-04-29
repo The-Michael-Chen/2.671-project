@@ -15,18 +15,23 @@
         <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true"/>
     </asset>
     <worldbody>
-        <geom name="floor" pos="0 0 -1.0" size="0 0 1" type="plane" material="matplane"/>
+        <geom name="floor" pos="0 0 -4.0" size="0 0 1" type="plane" material="matplane"/>
         <light directional="true" diffuse=".5 .5 .5" specular=".2 .2 .2" pos="0 0 5" dir="0 0 -1"/>
-        <body pos = "0 0 0">
-            <body pos = "0 0.1 0">
-                <geom name="load_arm" type="capsule" size="0.045" fromto="0 0.5 0 0 0 0"  rgba=".5 .1 .1 1"/>
-                <body pos="0.0 0.5 0.0">
-                    <geom name="weight" type="box" size="0.1 0.1 0.1" />
-                    <site name = "mount"/>
+        <!-- <geom name = "motor_body" type = "cylinder" size = "0.4625 0.21" rgba = "0 0 1 1" quat="0 0.701 0 0.701" pos = "0.22 0 0" friction="0"/> -->
+        <body>
+            <geom name = "motor_body" type = "cylinder" size = "0.4625 0.21" rgba = "0 0 1 1" quat="0 0.701 0 0.701" pos = "0.2258 0 0" friction="0" gap="0.01"/>
+            <body>
+                <body pos = "0 0.29 0">
+                    <geom name="load_arm" type = "box" size=".01588 0.90744 0.08625" rgba=".5 .1 .1 1" pos = "0 0.90744 0" density = "2710"/>
+                    <!-- <geom name="load_arm" type="capsule" size="0.045" fromto="0 0.5 0 0 0 0"  rgba=".5 .1 .1 1"/> -->
+                    <body pos="-0.055 1.81488 0.0">
+                        <geom name="weight" type="box" size="0.055 0.255 0.305" density = "7750"/>
+                        <site name = "mount"/>
+                    </body>
                 </body>
+                <joint name="motor"/>
+                <geom name="motor" type="cylinder" pos="0 0 0" size=".29 .01588" rgba=".5 .1 .8 .5" quat="0 0.701 0 0.701" mass="0" group="1" friction="0" gap="0.01" density = "2710"/>
             </body>
-            <joint name="motor"/>
-            <geom name="motor" type="cylinder" pos="0 0 0" size=".1 .05" rgba=".5 .1 .8 .5" quat="0 0.701 0 0.701" mass="0" group="1"/>
         </body>
     </worldbody>
 
