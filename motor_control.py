@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 xml_path = 'motor_model.xml'
 simend = 7
 print_camera_config = 0
-
+speed_num = 13
 header = ['timestep', 'angular_velocity', 'torque']
-file_name = "test_data.csv"
-f = open('data/' + file_name, mode='w', newline='')
+file_name = "vel_" + str(speed_num) + "_gain_0.5.csv"
+f = open('final_poster_data/' + file_name, mode='w', newline='')
 writer = csv.writer(f)
 writer.writerow(header)
 
@@ -42,7 +42,7 @@ def controller(model, data):
 
     #speed control; velocity servo
     set_velocity_servo(2, 0.5)
-    data.ctrl[2] = 3  #velocity
+    data.ctrl[2] = speed_num #velocity
 
     #position control; position/velocity servo
     # set_position_servo(1, 100)
@@ -188,10 +188,12 @@ mj.set_mjcb_control(controller)
 
 mj.mj_resetDataKeyframe(model, data, 0)
 print(model.body_mass)
-
 time_steps = []
 angular_velocity = []
 torque = []
+arm_mass = 0.31489855
+arm_length = 0.01725
+angular_acceleration = []
 
 while not glfw.window_should_close(window):
     time_prev = data.time
@@ -202,7 +204,11 @@ while not glfw.window_should_close(window):
     if (data.time>=simend):
         break;
     # DATA READOUTS: 
-    cur_torque = data.sensor('torque_sensor').data[0]
+    # prev_torque = data.sensor('torque_sensor').data
+    # print(prev_torque)
+    angular_acceleration.append(data.qacc)
+    cur_torque = data.qacc[0] * arm_mass * arm_length
+    # print(data.qacc[0])
     cur_vel = data.actuator_velocity[2]
     time = data.time
     time_steps.append(data.time)
@@ -230,6 +236,8 @@ while not glfw.window_should_close(window):
 
     # process pending GUI events, call GLFW callbacks
     glfw.poll_events()
+print("mean")
+print(sum(angular_acceleration)/len(angular_acceleration))
 
 dpi = 120
 width = 600
@@ -246,6 +254,7 @@ ax[1].set_xlabel('time (seconds)')
 ax[1].set_ylabel('Torque')
 _ = ax[1].set_title('N*m')
 plt.show()
+
 
 f.close()
 glfw.terminate()

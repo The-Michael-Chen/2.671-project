@@ -11,15 +11,6 @@ import numpy as np
 from typing import Callable, NamedTuple, Optional, Union, List
 import matplotlib.pyplot as plt
 
-xml_path = 'motor_model.xml'
-simend = 7
-print_camera_config = 0
-
-header = ['timestep', 'angular_velocity', 'torque']
-file_name = "test_data.csv"
-f = open('data/' + file_name, mode='w', newline='')
-writer = csv.writer(f)
-writer.writerow(header)
 
 # For callback functions
 button_left = False
@@ -27,6 +18,10 @@ button_middle = False
 button_right = False
 lastx = 0
 lasty = 0
+gain = 0
+velocity = 0
+
+
 
 def init_controller(model,data):
     #initialize the controller here. This function is called once, in the beginning
@@ -41,8 +36,8 @@ def controller(model, data):
     # data.ctrl[1] = np.pi  #position
 
     #speed control; velocity servo
-    set_velocity_servo(2, 0.5)
-    data.ctrl[2] = 3  #velocity
+    set_velocity_servo(2, gain)
+    data.ctrl[2] = velocity  #velocity
 
     #position control; position/velocity servo
     # set_position_servo(1, 100)
@@ -68,7 +63,6 @@ def set_position_servo(actuator_no, kp):
 def set_velocity_servo(actuator_no, kv):
     model.actuator_gainprm[actuator_no, 0] = kv
     model.actuator_biasprm[actuator_no, 2] = -kv
-
 
 def keyboard(window, key, scancode, act, mods):
     if act == glfw.PRESS and key == glfw.KEY_BACKSPACE:
@@ -140,112 +134,132 @@ def scroll(window, xoffset, yoffset):
     mj.mjv_moveCamera(model, action, 0.0, -0.05 *
                       yoffset, scene, cam)
 
-#get the full path
-xml_path = os.path.abspath(xml_path)
+def initialization():
+    #get the full path
 
-# MuJoCo data structures
-model = mj.MjModel.from_xml_path(xml_path)  # MuJoCo model
-data = mj.MjData(model)                # MuJoCo data
-cam = mj.MjvCamera()                        # Abstract camera
-opt = mj.MjvOption()                        # visualization options
+    xml_path = 'draft_paper_motor_model.xml'
+    simend = 7
+    print_camera_config = 0
 
-# Init GLFW, create window, make OpenGL context current, request v-sync
-glfw.init()
-window = glfw.create_window(1200, 900, "Demo", None, None)
-glfw.make_context_current(window)
-glfw.swap_interval(1)
+    xml_path = os.path.abspath(xml_path)
 
-# initialize visualization data structures
-mj.mjv_defaultCamera(cam)
-mj.mjv_defaultOption(opt)
-scene = mj.MjvScene(model, maxgeom=10000)
-context = mj.MjrContext(model, mj.mjtFontScale.mjFONTSCALE_150.value)
+    # MuJoCo data structures
+    model = mj.MjModel.from_xml_path(xml_path)  # MuJoCo model
+    data = mj.MjData(model)                # MuJoCo data
+    cam = mj.MjvCamera()                        # Abstract camera
+    opt = mj.MjvOption()                        # visualization options
 
-# install GLFW mouse and keyboard callbacks
-glfw.set_key_callback(window, keyboard)
-glfw.set_cursor_pos_callback(window, mouse_move)
-glfw.set_mouse_button_callback(window, mouse_button)
-glfw.set_scroll_callback(window, scroll)
+    # Init GLFW, create window, make OpenGL context current, request v-sync
+    glfw.init()
+    window = glfw.create_window(1200, 900, "Demo", None, None)
+    glfw.make_context_current(window)
+    glfw.swap_interval(1)
 
-# Example on how to set camera configuration
-# cam.azimuth = 90
-# cam.elevation = -45
-# cam.distance = 2
-# cam.lookat = np.array([0.0, 0.0, 0])
-cam.azimuth = -0.2568020402892691 ; cam.elevation = -1.2800579336767537 ; cam.distance =  0.936735440362224
-cam.lookat =np.array([ 0.0 , 0.0 , 0.0 ])
+    # initialize visualization data structures
+    mj.mjv_defaultCamera(cam)
+    mj.mjv_defaultOption(opt)
+    scene = mj.MjvScene(model, maxgeom=10000)
+    context = mj.MjrContext(model, mj.mjtFontScale.mjFONTSCALE_150.value)
 
-data.qpos[0] = np.pi/2
+    # install GLFW mouse and keyboard callbacks
+    glfw.set_key_callback(window, keyboard)
+    glfw.set_cursor_pos_callback(window, mouse_move)
+    glfw.set_mouse_button_callback(window, mouse_button)
+    glfw.set_scroll_callback(window, scroll)
+
+    # Example on how to set camera configuration
+    # cam.azimuth = 90
+    # cam.elevation = -45
+    # cam.distance = 2
+    # cam.lookat = np.array([0.0, 0.0, 0])
+    cam.azimuth = -0.2568020402892691 ; cam.elevation = -1.2800579336767537 ; cam.distance =  0.936735440362224
+    cam.lookat =np.array([ 0.0 , 0.0 , 0.0 ])
+
+    data.qpos[0] = np.pi/2
+
+    #init_controller(model, data)
+
+    #set the controller
+    mj.set_mjcb_control(controller)
+
+    mj.mj_resetDataKeyframe(model, data, 0)
+    return model, data, window, opt, cam, scene, context, simend
+
+def initialize_file(trial_name):
+    header = ['timestep', 'angular_velocity', 'torque']
+    file_name = trial_name + ".csv"
+    f = open('data/' + file_name, mode='w', newline='')
+    writer = csv.writer(f)
+    writer.writerow(header)
+    return f, writer
 
 actual_speeds = [3.56592958919683,	4.55877935154993, 5.54824913615609, 6.54213921878825, 7.51894904882895, 8.52646175725307, 9.51331553503774, 10.5092064733105, 11.5075797297270, 12.4956671148198]
 target_speeds = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 gains = [0.1, 0.3, 0.5, 0.7, 0.9]
 
-init_controller(model, data)
-
-#set the controller
-mj.set_mjcb_control(controller)
-
-mj.mj_resetDataKeyframe(model, data, 0)
-print(model.body_mass)
-
 time_steps = []
 angular_velocity = []
 torque = []
+model, data, window, opt, cam, scene, context, simend = initialization()
 
-while not glfw.window_should_close(window):
-    time_prev = data.time
+for g in range(len(gains)):
+    gain = gains[g]
+    for i in range(len(target_speeds)):
+        velocity = target_speeds[i]
+        f, writer = initialize_file("vel_" + str(velocity) + "_gain_" + str(gain))
+        while not glfw.window_should_close(window):
+            time_prev = data.time
+            while (data.time - time_prev < 1.0/60.0):
+                mj.mj_step(model, data)
 
-    while (data.time - time_prev < 1.0/60.0):
-        mj.mj_step(model, data)
+            if (data.time>=simend):
+                break;
+            # DATA READOUTS: 
+            cur_torque = data.sensor('torque_sensor').data[0]
+            cur_vel = data.actuator_velocity[2]
+            time = data.time
+            time_steps.append(data.time)
+            angular_velocity.append(cur_vel)
+            torque.append(cur_torque)
+            row = [str(time), str(cur_vel), str(cur_torque)]
+            writer.writerow(row)
+            # get framebuffer viewport
+            viewport_width, viewport_height = glfw.get_framebuffer_size(
+                window)
+            viewport = mj.MjrRect(0, 0, viewport_width, viewport_height)
 
-    if (data.time>=simend):
-        break;
-    # DATA READOUTS: 
-    cur_torque = data.sensor('torque_sensor').data[0]
-    cur_vel = data.actuator_velocity[2]
-    time = data.time
-    time_steps.append(data.time)
-    angular_velocity.append(cur_vel)
-    torque.append(cur_torque)
-    row = [str(time), str(cur_vel), str(cur_torque)]
-    writer.writerow(row)
-    # get framebuffer viewport
-    viewport_width, viewport_height = glfw.get_framebuffer_size(
-        window)
-    viewport = mj.MjrRect(0, 0, viewport_width, viewport_height)
+            # #print camera configuration (help to initialize the view)
+            # if (print_camera_config==1):
+            #     print('cam.azimuth =',cam.azimuth,';','cam.elevation =',cam.elevation,';','cam.distance = ',cam.distance)
+            #     print('cam.lookat =np.array([',cam.lookat[0],',',cam.lookat[1],',',cam.lookat[2],'])')
 
-    #print camera configuration (help to initialize the view)
-    if (print_camera_config==1):
-        print('cam.azimuth =',cam.azimuth,';','cam.elevation =',cam.elevation,';','cam.distance = ',cam.distance)
-        print('cam.lookat =np.array([',cam.lookat[0],',',cam.lookat[1],',',cam.lookat[2],'])')
+            # Update scene and render
+            mj.mjv_updateScene(model, data, opt, None, cam,
+                            mj.mjtCatBit.mjCAT_ALL.value, scene)
+            mj.mjr_render(viewport, scene, context)
 
-    # Update scene and render
-    mj.mjv_updateScene(model, data, opt, None, cam,
-                       mj.mjtCatBit.mjCAT_ALL.value, scene)
-    mj.mjr_render(viewport, scene, context)
+            # swap OpenGL buffers (blocking call due to v-sync)
+            glfw.swap_buffers(window)
 
-    # swap OpenGL buffers (blocking call due to v-sync)
-    glfw.swap_buffers(window)
+            # process pending GUI events, call GLFW callbacks
+            glfw.poll_events()
 
-    # process pending GUI events, call GLFW callbacks
-    glfw.poll_events()
+        f.close()
+        glfw.terminate()
 
-dpi = 120
-width = 600
-height = 800
-figsize = (width / dpi, height / dpi)
-_, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi, sharex=True)
 
-ax[0].plot(time_steps, angular_velocity)
-ax[0].set_title('angular velocity')
-ax[0].set_ylabel('radians / second')
 
-ax[1].plot(time_steps, torque)
-ax[1].set_xlabel('time (seconds)')
-ax[1].set_ylabel('Torque')
-_ = ax[1].set_title('N*m')
-plt.show()
+        # ax[0].plot(time_steps, angular_velocity)
+        # ax[0].set_title('angular velocity')
+        # ax[0].set_ylabel('radians / second')
 
-f.close()
-glfw.terminate()
+        # ax[1].plot(time_steps, torque)
+        # ax[1].set_xlabel('time (seconds)')
+        # ax[1].set_ylabel('Torque')
+        # _ = ax[1].set_title('N*m')
+        # plt.show()
+        # dpi = 120
+        # width = 600
+        # height = 800
+        # figsize = (width / dpi, height / dpi)
+        # _, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi, sharex=True)

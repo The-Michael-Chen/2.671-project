@@ -21,16 +21,16 @@
         <body>
             <geom name = "motor_body" type = "cylinder" size = "0.04625 0.021" rgba = "0 0 1 1" quat="0 0.701 0 0.701" pos = "0.02258 0 0" friction="0" gap="0.01"/>
             <body>
-                <body pos = "0 0.029 0">
-                    <geom name="load_arm" type = "box" size=".001588 0.090744 0.008625" rgba=".5 .1 .1 1" pos = "0 0.090744 0" density = "2710"/>
+                <body name="arm" pos = "0 0.029 0">
+                    <geom name="load_arm" type = "box" size=".001588 0.090744 0.008625" rgba=".5 .1 .1 1" pos = "0 0.090744 0" density = "2710"/> <!--body id 3-->
                     <!-- <geom name="load_arm" type="capsule" size="0.045" fromto="0 0.5 0 0 0 0"  rgba=".5 .1 .1 1"/> -->
-                    <body pos="-0.0055 0.181488 0.0">
+                    <body name = "weight" pos="-0.0055 0.181488 0.0"> <!--body id 4-->
                         <geom name="weight" type="box" size="0.0055 0.0255 0.0305" density = "7750"/>
                         <site name = "mount"/>
                     </body>
                 </body>
                 <joint name="motor"/>
-                <geom name="motor" type="cylinder" pos="0 0 0" size=".029 .001588" rgba=".5 .1 .8 .5" quat="0 0.701 0 0.701" group="1" friction="0" gap="0.01" density = "2710"/>
+                <geom name="motor" type="cylinder" pos="0 0 0" size=".029 .001588" rgba=".5 .1 .8 .5" quat="0 0.701 0 0.701" group="1" friction="0" gap="0.01" density = "2710"/> <!--body id 2-->
             </body>
         </body>
     </worldbody>
